@@ -871,13 +871,13 @@ static char* ExportRsaKeyInPEMFormat(RSA* rsaKey)
 
     char* privateKeyInPEMFormat = ReadFile(PrivateKeyFilePath);
 
-    // int result = remove(PrivateKeyFilePath);
+    int result = remove(PrivateKeyFilePath);
 
-    // if(result != 0)
-    // {
-    //     printf("error occurred in removing file.\n");
-    //     return NULL;
-    // }
+    if(result != 0)
+    {
+        printf("error occurred in removing file.\n");
+        return NULL;
+    }
 
     // RSA key will also be free with this call.
     EVP_PKEY_free(pk);

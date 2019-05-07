@@ -48,13 +48,10 @@ int main(int argc, char *argv[])
         TpmCppWrapper t("/etc/azuredm/agentcert.pem");
 
         const char* privateKey = t.GetPrivateKey();
-        printf("hi1");
         printf("\nPrivate key= %s\n", privateKey);
 
-        printf("hi2");
         int result = t.Createx509SelfSignedCert();
-        printf("hi3");
-        
+                
         if(result == 0)
         {
             printf("\nx509 certificate created successfully.\n");
