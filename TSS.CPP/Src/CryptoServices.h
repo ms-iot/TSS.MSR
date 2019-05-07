@@ -50,6 +50,10 @@ class _DLLEXP_ CryptoServices {
         static class SignResponse Sign(class TSS_KEY& key, 
                                        vector<BYTE>& toSign,
                                        const class TPMU_SIG_SCHEME& _nonDefaultScheme);
+        
+        static char* ExportPrivateKeyInPEMFormat(class TSS_KEY *key);
+
+        static int Createx509SelfSignedCert(class TSS_KEY *key, const char* certificateFilePath);
 
         ///<summary>CFB Encryption (encrypt = true) or Decryption (decrypt = false) of x</summary>
         static ByteVec CFBXncrypt(bool encrypt, 

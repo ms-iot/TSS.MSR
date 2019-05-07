@@ -6,9 +6,10 @@ LFLAGS = -Wall $(DEBUG)
 SAMPLESDIR = ../Samples
 LIBDIR = ../Src
 SRCS = AuthSessions.cpp CryptoServices.cpp Helpers.cpp MarshallIn.cpp MarshallOut.cpp Policy.cpp stdafx.cpp TextSerializer.cpp Tpm2.cpp TpmCpp.cpp TpmCustomDefs.cpp TpmDevice.cpp TpmStructureBase.cpp TpmTypes.cpp TpmTypes_skel.cpp dllmain.cpp
-SRCSTST = $(SAMPLESDIR)/DocSamples.cpp $(SAMPLESDIR)/Samples.cpp
+# SRCSTST = $(SAMPLESDIR)/DocSamples.cpp $(SAMPLESDIR)/Samples.cpp
+SRCSTST = $(SAMPLESDIR)/DocSamples.cpp $(SAMPLESDIR)/Samples.cpp $(SAMPLESDIR)/TpmCppWrapper.cpp
 OBJS = AuthSessions.o CryptoServices.o Helpers.o MarshallIn.o MarshallOut.o Policy.o stdafx.o TextSerializer.o Tpm2.o TpmCpp.o TpmCustomDefs.o TpmDevice.o TpmStructureBase.o TpmTypes.o TpmTypes_skel.o dllmain.o
-OBJSTST = DocSamples.o Samples.o TpmCpp.a
+OBJSTST = TpmCppWrapper.o DocSamples.o Samples.o TpmCpp.a
 
 all: TpmCpp TpmCppTester
 

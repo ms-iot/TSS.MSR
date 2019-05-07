@@ -19,6 +19,8 @@ extern "C" {
 #include <openssl/rand.h>
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
+#include <openssl/pem.h>
+#include <openssl/x509v3.h>
 
 #if OPENSSL_VERSION_NUMBER >= 0x10200000L
     // Check the rsa_st and RSA_PRIME_INFO definitions in crypto/rsa/rsa_lcl.h and
@@ -67,6 +69,8 @@ extern "C" {
 #endif // OPENSSL_VERSION_NUMBER
 
 }
+
+// #include "CryptoServices.h"
 
 typedef INT16     CRYPT_RESULT;
 
@@ -689,6 +693,288 @@ ByteVec CryptoServices::StringToEncodingParms(const string& s)
 
     parms[s.length()] = 0;
     return parms;
+}
+
+static int X509AddExt(X509 *cert, int nid, char *value)
+{
+    X509_EXTENSION *ex;
+    X509V3_CTX ctx;
+
+    /* This sets the 'context' of the extensions. */
+    /* No configuration database */
+    X509V3_set_ctx_nodb(&ctx);
+
+    /* Issuer and subject certs: both the target since it is self signed,
+    * no request and no CRL
+    */
+    X509V3_set_ctx(&ctx, cert, cert, NULL, NULL, 0);
+    ex = X509V3_EXT_conf_nid(NULL, &ctx, nid, value);
+    if (!ex)
+        return 0;
+
+    X509_add_ext(cert, ex, -1);
+    X509_EXTENSION_free(ex);
+    return 1;
+}
+
+static RSA* GetRsaKey(TSS_KEY *key)
+{
+    // Set the selectors
+    TPMT_PUBLIC pubKey = key->publicPart;
+    pubKey.ToBuf();
+
+    TPMS_RSA_PARMS *rsaParms = dynamic_cast<TPMS_RSA_PARMS *> (pubKey.parameters);
+
+    if (rsaParms == NULL) {
+        throw domain_error("Only RSA signing is supported");
+    }
+
+    TPM2B_PUBLIC_KEY_RSA *rsaPubKey = dynamic_cast<TPM2B_PUBLIC_KEY_RSA *> (pubKey.unique);
+    ByteVec priv = key->privatePart;
+
+    RSA *keyX;
+    BN_CTX *ctxt = BN_CTX_new();
+    BIGNUM *bn_mod = NULL;
+    BIGNUM *bn_exp = NULL;
+    BIGNUM *bn_p = BN_new();
+    BIGNUM *rem = BN_new();
+    BIGNUM *bn_q = BN_new();
+    BIGNUM *bn_d = BN_new();
+
+    BIGNUM *bnPhi = BN_new();
+
+    // TODO: Non-default exponent.
+    BYTE exponent[] {1, 0, 1};
+
+    bn_mod = BN_bin2bn(&rsaPubKey->buffer[0], (int)rsaPubKey->buffer.size(), NULL);
+    bn_exp = BN_bin2bn(exponent, 3, NULL);
+    bn_p = BN_bin2bn(&priv[0], (int)priv.size(), NULL);
+
+    BN_div(bn_q, rem, bn_mod, bn_p, ctxt);
+
+    keyX = RSA_new();
+    keyX->n = bn_mod;
+    keyX->e = bn_exp;
+    keyX->d = NULL;
+    keyX->q = bn_q;
+    keyX->p = bn_p;
+
+    // Get compute Phi = (p - 1)(q - 1) = pq - p - q + 1 = n - p - q + 1
+    if (BN_copy(bnPhi, bn_mod) == NULL
+        || !BN_sub(bnPhi, bnPhi, bn_p)
+        || !BN_sub(bnPhi, bnPhi, bn_q)
+        || !BN_add_word(bnPhi, 1)) {
+        _ASSERT(FALSE);
+    }
+
+    if (BN_mod_inverse(bn_d, bn_exp, bnPhi, ctxt) == NULL) {
+        _ASSERT(FALSE);
+    }
+
+    keyX->d = bn_d;
+
+// Ref: https://stackoverflow.com/questions/21151962/i-understand-the-mathematics-of-rsa-encryption-how-are-the-files-in-ssh-rela/21289989#21289989
+//  exponent1         INTEGER,  -- d mod (p-1)
+//  exponent2         INTEGER,  -- d mod (q-1)
+//  coefficient       INTEGER,  -- (inverse of q) mod p
+    
+    // exponent 1 -->dmp1 BIGNUM*
+    BIGNUM *bn_dmp1 = BN_new();
+    BIGNUM *bn_p1 = BN_new();
+    bn_p1 = BN_dup(bn_p); //return check.
+    BN_sub_word(bn_p1, 1); //return check.
+    BN_div(NULL, bn_dmp1, bn_d, bn_p1, ctxt);
+    keyX->dmp1 = bn_dmp1;
+    
+    // exponent 2 -->dmq1 BIGNUM*
+    BIGNUM *bn_dmq1 = BN_new();
+    BIGNUM *bn_q1 = BN_new();
+    bn_q1 = BN_dup(bn_q); //return check.
+    BN_sub_word(bn_q1, 1); //return check.
+    BN_div(NULL, bn_dmq1, bn_d, bn_q1, ctxt);
+    keyX->dmq1 = bn_dmq1;
+    
+    // coeficient -->iqmp BIGNUM*
+    BIGNUM *bn_iqmp = BN_new();
+    BN_mod_inverse(bn_iqmp, bn_q, bn_p, ctxt); //return check.
+    keyX->iqmp = bn_iqmp;
+
+    BN_clear_free(bnPhi);
+    BN_free(rem);
+    BN_CTX_free(ctxt);
+    
+    return keyX;
+}
+
+static char* ReadFile(const char* filePath)
+{
+    FILE *file = fopen(filePath, "rb");
+
+    if (!file)
+    {
+        printf("error occurred in fopen");
+        return NULL;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long fSize = ftell(file);
+    rewind(file);
+
+    if(fSize == 0)
+    {
+        printf("warning: file size is zero");
+    }
+
+    char* message = (char*) malloc(fSize+1);
+    memset(message, '\0', fSize+1);
+
+    if (!message)
+    {
+        printf("error occurred in malloc");
+        return NULL;
+    }
+
+    long readCount = fread(message, sizeof(char), fSize, file);
+
+    if (readCount != fSize)
+    {
+        printf("error occurred in fread");
+        return NULL;
+    }
+
+    fclose(file);
+    return message;
+}
+
+static char* ExportRsaKeyInPEMFormat(RSA* rsaKey)
+{
+    const char* PrivateKeyFilePath = "/etc/ssl/dmprivatekey.pem";
+	EVP_PKEY *pk = EVP_PKEY_new();
+    
+    if (!EVP_PKEY_assign_RSA(pk, rsaKey))
+    {
+        printf("error occurred in EVP_PKEY_assign_RSA.");
+        return NULL;
+    }
+
+    FILE * pkey_file = fopen(PrivateKeyFilePath, "wb");
+
+    if (!pkey_file)
+    {
+         printf("Unable to open \"dmprivatekey.pem\" for writing.\n");
+         return NULL;
+    }
+
+    PEM_write_PrivateKey(pkey_file, pk, NULL, NULL, 0, NULL, NULL);
+
+    fclose(pkey_file);
+
+    char* privateKeyInPEMFormat = ReadFile(PrivateKeyFilePath);
+
+    // int result = remove(PrivateKeyFilePath);
+
+    // if(result != 0)
+    // {
+    //     printf("error occurred in removing file.\n");
+    //     return NULL;
+    // }
+
+    // RSA key will also be free with this call.
+    EVP_PKEY_free(pk);
+
+    return privateKeyInPEMFormat;
+}
+
+// Return 0 on success else return 1 for failure.
+int CreateAndExportX509certificateInPEMFormat(RSA* keyX, const char* certificateFilePath)
+{
+
+    int result = 1;
+
+	X509 *x = X509_new();
+	EVP_PKEY *pk = EVP_PKEY_new();
+    X509_NAME *name = NULL;
+    
+    //todo: Needs to unique number everytime.
+    int serial = 1;
+    int days = 365;
+
+    if (!EVP_PKEY_assign_RSA(pk, keyX))
+    {
+        printf("error occurred in EVP_PKEY_assign_RSA.\n");
+        return result;
+    }
+
+    X509_set_version(x, 2);
+
+    ASN1_INTEGER_set(X509_get_serialNumber(x), serial);
+
+    X509_gmtime_adj(X509_get_notBefore(x), 0);
+    X509_gmtime_adj(X509_get_notAfter(x), (long)60 * 60 * 24 * days);
+    
+    X509_set_pubkey(x, pk);
+
+    name = X509_get_subject_name(x);
+
+    //todo: Needs to create unique persistent device name
+    X509_NAME_add_entry_by_txt(name, "CN",
+        MBSTRING_ASC, (unsigned char*)"mydemodevice", -1, -1, 0);
+
+    // Its self signed so set the issuer name to be the same as the
+    // subject.
+    X509_set_issuer_name(x, name);
+
+    // Add various extensions: standard extensions */
+    X509AddExt(x, NID_basic_constraints, "CA:FALSE, pathlen:0");
+
+    if (!X509_sign(x, pk, EVP_sha256()))
+    {
+        printf("error occurred in X509_sign.");
+        return result;
+    }
+
+    FILE * cert_file = fopen(certificateFilePath, "wb");
+    if (!cert_file)
+    {
+        printf("Unable to open \"cert.pem\" for writing.\n");
+    }
+
+    result = PEM_write_X509(cert_file , x);
+
+    if(result != 1)
+    {
+        printf("error occurred in writing the x509 certificate.\n");
+        return 1;
+    }
+    else
+    {
+        result = 0;
+    }
+
+    // RSA key will also be free with this call.
+    EVP_PKEY_free(pk);
+    fclose(cert_file);
+    X509_free(x);
+
+    return result;
+}
+
+char* CryptoServices::ExportPrivateKeyInPEMFormat(TSS_KEY *key)
+{
+    RSA *keyX = GetRsaKey(key);
+
+    char* privateKey = ExportRsaKeyInPEMFormat(keyX);
+
+    return privateKey;
+}
+
+int CryptoServices::Createx509SelfSignedCert(TSS_KEY *key, const char* certificateFilePath)
+{
+    RSA *keyX = GetRsaKey(key);
+
+    int result = CreateAndExportX509certificateInPEMFormat(keyX, certificateFilePath);
+
+    return result;
 }
 
 _TPMCPP_END
