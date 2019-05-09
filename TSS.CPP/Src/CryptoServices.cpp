@@ -886,7 +886,7 @@ static char* ExportRsaKeyInPEMFormat(RSA* rsaKey)
 }
 
 // Return 0 on success else return 1 for failure.
-int CreateAndExportX509certificateInPEMFormat(RSA* keyX, const char* certificateFilePath)
+int CreateAndExportX509certificateInPEMFormat(RSA* keyX, const char* certificateFilePath, const char* certificateCommonName)
 {
 
     int result = 1;
@@ -918,7 +918,7 @@ int CreateAndExportX509certificateInPEMFormat(RSA* keyX, const char* certificate
 
     //todo: Needs to create unique persistent device name
     X509_NAME_add_entry_by_txt(name, "CN",
-        MBSTRING_ASC, (unsigned char*)"mydemodevice", -1, -1, 0);
+        MBSTRING_ASC, (unsigned char*)certificateCommonName, -1, -1, 0);
 
     // Its self signed so set the issuer name to be the same as the
     // subject.
@@ -968,11 +968,11 @@ char* CryptoServices::ExportPrivateKeyInPEMFormat(TSS_KEY *key)
     return privateKey;
 }
 
-int CryptoServices::Createx509SelfSignedCert(TSS_KEY *key, const char* certificateFilePath)
+int CryptoServices::Createx509SelfSignedCert(TSS_KEY *key, const char* certificateFilePath, const char* certificateCommonName)
 {
     RSA *keyX = GetRsaKey(key);
 
-    int result = CreateAndExportX509certificateInPEMFormat(keyX, certificateFilePath);
+    int result = CreateAndExportX509certificateInPEMFormat(keyX, certificateFilePath, certificateCommonName);
 
     return result;
 }

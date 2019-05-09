@@ -53,7 +53,7 @@ class _DLLEXP_ CryptoServices {
         
         static char* ExportPrivateKeyInPEMFormat(class TSS_KEY *key);
 
-        static int Createx509SelfSignedCert(class TSS_KEY *key, const char* certificateFilePath);
+        static int Createx509SelfSignedCert(class TSS_KEY *key, const char* certificateFilePath, const char* certificateCommonName);
 
         ///<summary>CFB Encryption (encrypt = true) or Decryption (decrypt = false) of x</summary>
         static ByteVec CFBXncrypt(bool encrypt, 

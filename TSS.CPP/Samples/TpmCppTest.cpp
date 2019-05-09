@@ -9,8 +9,8 @@ Microsoft Confidential
 
 using namespace TpmCpp;
 
-// #include "Samples.h"
-#include "TpmCppWrapper.h"
+#include "Samples.h"
+
 
 // The name "DllInit" is misleading on non-WIN32 platforms but
 // the purpose of the routine is the same, initializing TSS.CPP.
@@ -43,34 +43,8 @@ int main(int argc, char *argv[])
     // DllInit();
 
     try {
-        // Samples s;
-        // s.RunAllSamples();
-        TpmCppWrapper t("/etc/azuredm/agentcert.pem");
-
-        const char* privateKey = t.GetPrivateKey();
-        printf("\nPrivate key= %s\n", privateKey);
-
-        int result = t.Createx509SelfSignedCert();
-                
-        if(result == 0)
-        {
-            printf("\nx509 certificate created successfully.\n");
-        }
-        else
-        {
-            printf("\nx509 certificate creation failed.\n");
-        }
-
-        const char* x509Certificate = t.GetX509Cert();
-
-        if(!x509Certificate)
-        {
-            printf("x509 certificate does not exist\n");
-        }
-        else
-        {
-            printf("read x509 certificate=%s\n", x509Certificate);
-        }
+        Samples s;
+        s.RunAllSamples();
     }
     catch (const runtime_error& exc) {
         cerr << "TpmCppTester: " << exc.what() << "\nExiting...\n";
