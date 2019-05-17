@@ -927,7 +927,8 @@ int CreateAndExportX509certificateInPEMFormat(RSA* keyX, const char* certificate
     X509_set_issuer_name(x, name);
 
     // Add various extensions: standard extensions */
-    X509AddExt(x, NID_basic_constraints, "CA:FALSE, pathlen:0");
+    const char* standardExtension = "CA:FALSE, pathlen:0";
+    X509AddExt(x, NID_basic_constraints, strdup(standardExtension));
 
     if (!X509_sign(x, pk, EVP_sha256()))
     {

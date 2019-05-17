@@ -28,7 +28,7 @@ file(GLOB SRC_FILES
 
 add_definitions(-D_TPMCPPLIB)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -Wno-cast-function-type")  
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")  
 
 add_library(${PROJECT_NAME} STATIC ${SRC_FILES})
 
