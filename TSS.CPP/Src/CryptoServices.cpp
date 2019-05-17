@@ -9,6 +9,8 @@ Microsoft Confidential
 #include "Tpm2.h"
 #include "MarshallInternal.h"
 #include "CryptoServices.h"
+#include <iostream>
+#include <fstream>
 
 extern "C" {
 #include <openssl/aes.h>
@@ -806,43 +808,43 @@ static RSA* GetRsaKey(TSS_KEY *key)
     return keyX;
 }
 
-static char* ReadFile(const char* filePath)
+char* ReadFile(const char* filePath)
 {
-    FILE *file = fopen(filePath, "rb");
+    ifstream file(filePath, ifstream::binary | ifstream::in);
+
+    if(!file.good())
+    {
+        cerr << "error occurred in opening file" << endl;
+        return nullptr;
+    }
+
+    file.seekg(0, file.end);
+    int fSize = file.tellg();
+    
+    if(fSize <= 0)
+    {
+        cerr << "error occurred in reading the file." << endl;
+        return nullptr;
+    }
+
+    file.seekg(0, file.beg);
+    char* message = new (std::nothrow) char[fSize];
+    
+    if (!message)
+    {
+        cerr << "error occurred in new" << endl;
+        return nullptr;
+    }
+
+    file.read(message, fSize);
 
     if (!file)
     {
-        printf("error occurred in fopen");
-        return NULL;
+        cerr << "error occurred in file read";
+        delete[] message;
+        return nullptr;
     }
 
-    fseek(file, 0, SEEK_END);
-    long fSize = ftell(file);
-    rewind(file);
-
-    if(fSize == 0)
-    {
-        printf("warning: file size is zero");
-    }
-
-    char* message = (char*) malloc(fSize+1);
-    memset(message, '\0', fSize+1);
-
-    if (!message)
-    {
-        printf("error occurred in malloc");
-        return NULL;
-    }
-
-    long readCount = fread(message, sizeof(char), fSize, file);
-
-    if (readCount != fSize)
-    {
-        printf("error occurred in fread");
-        return NULL;
-    }
-
-    fclose(file);
     return message;
 }
 
