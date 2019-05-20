@@ -48796,13 +48796,13 @@ void StructMarshallInfo::TpmTypeInitter()
     TypeMap[TpmTypeId::TPM_CLOCK_ADJUST_ID] = sInf;
     sInf->Name = "TPM_CLOCK_ADJUST";
     sInf->MyTypeInfo = typeid(TPM_CLOCK_ADJUST).name();
-    sInf->EnumNames[ (UINT32)(-3)] = "COARSE_SLOWER";
-    sInf->EnumNames[ (UINT32)(-2)] = "MEDIUM_SLOWER";
-    sInf->EnumNames[ (UINT32)(-1)] = "FINE_SLOWER";
-    sInf->EnumNames[ (UINT32)(0)] = "NO_CHANGE";
-    sInf->EnumNames[ (UINT32)(1)] = "FINE_FASTER";
-    sInf->EnumNames[ (UINT32)(2)] = "MEDIUM_FASTER";
-    sInf->EnumNames[ (UINT32)(3)] = "COARSE_FASTER";
+    sInf->EnumNames[ (INT8)(-3)] = "COARSE_SLOWER";
+    sInf->EnumNames[ (INT8)(-2)] = "MEDIUM_SLOWER";
+    sInf->EnumNames[ (INT8)(-1)] = "FINE_SLOWER";
+    sInf->EnumNames[ (INT8)(0)] = "NO_CHANGE";
+    sInf->EnumNames[ (INT8)(1)] = "FINE_FASTER";
+    sInf->EnumNames[ (INT8)(2)] = "MEDIUM_FASTER";
+    sInf->EnumNames[ (INT8)(3)] = "COARSE_FASTER";
     //===================TPM_EO
     sInf = new StructMarshallInfo();
     sInf->EnumNames.clear();
