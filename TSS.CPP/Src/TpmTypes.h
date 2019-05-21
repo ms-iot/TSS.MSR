@@ -1796,31 +1796,31 @@ enum class TPM_CLOCK_ADJUST : char
     /// <summary>
     /// Slow the Clock update rate by one coarse adjustment step.
     /// </summary>
-    COARSE_SLOWER = -3,
+    COARSE_SLOWER = static_cast<char>(-3),
     /// <summary>
     /// Slow the Clock update rate by one medium adjustment step.
     /// </summary>
-    MEDIUM_SLOWER = -2,
+    MEDIUM_SLOWER = static_cast<char>(-2),
     /// <summary>
     /// Slow the Clock update rate by one fine adjustment step.
     /// </summary>
-    FINE_SLOWER = -1,
+    FINE_SLOWER = static_cast<char>(-1),
     /// <summary>
     /// No change to the Clock update rate.
     /// </summary>
-    NO_CHANGE = 0,
+    NO_CHANGE = static_cast<char>(0),
     /// <summary>
     /// Speed the Clock update rate by one fine adjustment step.
     /// </summary>
-    FINE_FASTER = 1,
+    FINE_FASTER = static_cast<char>(1),
     /// <summary>
     /// Speed the Clock update rate by one medium adjustment step.
     /// </summary>
-    MEDIUM_FASTER = 2,
+    MEDIUM_FASTER = static_cast<char>(2),
     /// <summary>
     /// Speed the Clock update rate by one coarse adjustment step.
     /// </summary>
-    COARSE_FASTER = 3
+    COARSE_FASTER = static_cast<char>(3)
 };
 /// <summary>
 /// Table 18  Definition of (UINT16) TPM_EO Constants <IN/OUT>
