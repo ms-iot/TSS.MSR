@@ -15,11 +15,11 @@ endif(NOT CMAKE_BUILD_TYPE)
 # Set output directory and enable debug symbols for release
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(OUTPUT_DIR "${CMAKE_BINARY_DIR}/debug")
+    if(NOT MSVC)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+    endif(NOT MSVC)
 else()
   set(OUTPUT_DIR "${CMAKE_BINARY_DIR}/release")
-  if(NOT MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
-  endif(NOT MSVC)
 endif()
 
 file(GLOB SRC_FILES

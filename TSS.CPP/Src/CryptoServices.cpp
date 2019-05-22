@@ -810,39 +810,42 @@ static RSA* GetRsaKey(TSS_KEY *key)
 
 char* ReadFile(const char* filePath)
 {
-    ifstream file(filePath, ifstream::binary | ifstream::in);
+    char* message = nullptr;
 
-    if(!file.good())
+    try
     {
-        cerr << "error occurred in opening file" << endl;
-        return nullptr;
+        ifstream file;
+        file.exceptions(ifstream::eofbit | ifstream::failbit | ifstream::badbit);
+        file.open(filePath, ifstream::in);
+
+        file.seekg(0, file.end);
+
+        long int fSize = file.tellg();
+
+        if (fSize <= 0)
+        {
+            cerr << "error occurred in reading the file." << endl;
+            return nullptr;
+        }
+
+        file.seekg(0, file.beg);
+        message = new (std::nothrow) char[fSize + 1];
+
+        if (!message)
+        {
+            cerr << "error occurred in new" << endl;
+            return nullptr;
+        }
+
+        message[fSize] = '\0';
+        file.read(message, fSize);
+
     }
-
-    file.seekg(0, file.end);
-    int fSize = file.tellg();
-    
-    if(fSize <= 0)
+    catch (ifstream::failure &e)
     {
-        cerr << "error occurred in reading the file." << endl;
-        return nullptr;
-    }
-
-    file.seekg(0, file.beg);
-    char* message = new (std::nothrow) char[fSize];
-    
-    if (!message)
-    {
-        cerr << "error occurred in new" << endl;
-        return nullptr;
-    }
-
-    file.read(message, fSize);
-
-    if (!file)
-    {
-        cerr << "error occurred in file read";
+        cerr << "Error occurred in reading the file" << e.what();
         delete[] message;
-        return nullptr;
+        message = nullptr;
     }
 
     return message;
@@ -859,7 +862,7 @@ static char* ExportRsaKeyInPEMFormat(RSA* rsaKey)
         return NULL;
     }
 
-    FILE * pkey_file = fopen(PrivateKeyFilePath, "wb");
+    FILE * pkey_file = fopen(PrivateKeyFilePath, "w");
 
     if (!pkey_file)
     {
