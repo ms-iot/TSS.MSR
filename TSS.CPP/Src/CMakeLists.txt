@@ -19,7 +19,6 @@ add_library(${PROJECT_NAME} STATIC ${SRC_FILES})
 include_directories(../)
 
 target_link_libraries(${PROJECT_NAME}
-    -L/usr/lib
     -lssl
     -lcrypto
 )
