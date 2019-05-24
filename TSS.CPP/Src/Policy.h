@@ -62,7 +62,7 @@ class _DLLEXP_ PABase {
         virtual ~PABase() {};
 
         virtual PABase *Clone() {
-            _ASSERT(NULL);
+            _ASSERT(FALSE);
             return NULL;
         }
 
